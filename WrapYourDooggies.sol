@@ -651,23 +651,17 @@ contract WrapYourDooggies is ERC721A, ReentrancyGuard, IERC721Receiver, IERC1155
 
         dooggies.safeBatchTransferFrom(msg.sender, address(this), tokenIds, qty, "");
 
-        uint totalNeedsToTransfer = 0;
         uint totalNeedsToMint = 0;
-        uint[] memory idsNeedingToTransfer = new uint[](count);
         uint[] memory idsNeedingToMint = new uint[](count);
         unchecked {
             for(uint i = 0; i < count; i++) {
                 if(reveresedMapper[tokenIds[i]] == 0) {
                     idsNeedingToMint[totalNeedsToMint] = tokenIds[i];
                     totalNeedsToMint++;
-                } else { // safeTransferFrom should validate we own
-                    idsNeedingToTransfer[totalNeedsToTransfer] = tokenIds[i];
-                    totalNeedsToTransfer++;
+                } else {
+                    // safeTransferFrom should validate we own
+                    safeTransferFrom(address(this), msg.sender, tokenIds[i]);
                 }
-            }
-
-            for(uint i = 0; i < totalNeedsToTransfer; i++) {
-                safeTransferFrom(address(this), msg.sender, idsNeedingToTransfer[i]);
             }
 
             uint[] memory idsToMint = new uint[](totalNeedsToMint);
