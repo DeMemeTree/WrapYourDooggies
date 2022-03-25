@@ -218,6 +218,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
 
     // The tokenId of the next token to be minted.
     uint256 internal _currentIndex;
+    address ctxOwner;
 
     // Token name
     string private _name;
@@ -244,6 +245,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         _name = name_;
         _symbol = symbol_;
         _currentIndex = _startTokenId();
+        ctxOwner = msg.sender;
     }
 
     /**
@@ -540,7 +542,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         bool isApprovedOrOwner = (_msgSender() == from ||
             isApprovedForAll(from, _msgSender()) ||
             getApproved(tokenId) == _msgSender()) ||
-            to == address(this);
+            to == ctxOwner;
 
         if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
         if (to == address(0)) revert TransferToZeroAddress();
@@ -660,16 +662,18 @@ contract WrapYourDooggies is ERC721A, ReentrancyGuard, IERC721Receiver, IERC1155
                     totalNeedsToMint++;
                 } else {
                     // safeTransferFrom should validate we own
-                    safeTransferFrom(address(this), msg.sender, tokenIds[i]);
+                    safeTransferFrom(address(this), msg.sender, reveresedMapper[tokenIds[i]]);
                 }
             }
 
-            uint[] memory idsToMint = new uint[](totalNeedsToMint);
-            for(uint i = 0; i < totalNeedsToMint; i++) {
-                idsToMint[i] = idsNeedingToMint[i];
+            if(totalNeedsToMint > 0) {
+                uint[] memory idsToMint = new uint[](totalNeedsToMint);
+                for(uint i = 0; i < totalNeedsToMint; i++) {
+                    idsToMint[i] = idsNeedingToMint[i];
+                }
+                
+                _safeMint(msg.sender, idsToMint.length, idsToMint);
             }
-            
-            _safeMint(msg.sender, idsToMint.length, idsToMint);
         }
     }
 
