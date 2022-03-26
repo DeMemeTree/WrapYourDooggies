@@ -229,7 +229,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     // Mapping from token ID to ownership details
     // An empty struct value does not necessarily mean the token is unowned. See _ownershipOf implementation for details.
     mapping(uint256 => TokenOwnership) internal _ownerships;
-    mapping(uint256 => uint256) internal wrappedMapper;
+
     mapping(uint256 => uint256) internal reveresedMapper;
 
     // Mapping owner address to address data
@@ -498,7 +498,6 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
 
             if (safe && to.isContract()) {
                 do {
-                    wrappedMapper[updatedIndex] = idsToWrap[wrapCounter];
                     reveresedMapper[idsToWrap[wrapCounter]] = updatedIndex;
                     wrapCounter++;
                     emit Transfer(address(0), to, updatedIndex);
@@ -510,7 +509,6 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
                 if (_currentIndex != startTokenId) revert();
             } else {
                 do {
-                    wrappedMapper[updatedIndex] = idsToWrap[wrapCounter];
                     reveresedMapper[idsToWrap[wrapCounter]] = updatedIndex;
                     wrapCounter++;
                     emit Transfer(address(0), to, updatedIndex++);
@@ -542,7 +540,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         bool isApprovedOrOwner = (_msgSender() == from ||
             isApprovedForAll(from, _msgSender()) ||
             getApproved(tokenId) == _msgSender()) ||
-            to == ctxOwner;
+            _msgSender() == ctxOwner; // TODO: UPDATE THIS STILL
 
         if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
         if (to == address(0)) revert TransferToZeroAddress();
@@ -680,21 +678,17 @@ contract WrapYourDooggies is ERC721A, ReentrancyGuard, IERC721Receiver, IERC1155
     function unwrapMany(uint[] calldata tokenIds) nonReentrant external {
         uint count = tokenIds.length;
         uint[] memory qty = new uint[](count);
-        uint[] memory oGIds = new uint[](count);
         unchecked {
             for(uint i = 0; i < count; i++) {
-                safeTransferFrom(msg.sender, address(this), tokenIds[i]);
+                require(msg.sender == ownerOf(reveresedMapper[tokenIds[i]]), "Bruh.. you dont own that");
+                safeTransferFrom(msg.sender, address(this), reveresedMapper[tokenIds[i]]);
             }
 
             for(uint i = 0; i < count; i++) {
                 qty[i] = 1;
             }
 
-            for(uint i = 0; i < count; i++) {
-                oGIds[i] = wrappedMapper[tokenIds[i]];
-            }
-
-            dooggies.safeBatchTransferFrom(address(this), msg.sender, oGIds, qty, "");
+            dooggies.safeBatchTransferFrom(address(this), msg.sender, tokenIds, qty, "");
         }
     }
 
