@@ -660,6 +660,7 @@ contract WrapYourDooggies is ERC721A, ReentrancyGuard, IERC721Receiver, IERC1155
                     totalNeedsToMint++;
                 } else {
                     // safeTransferFrom should validate we own
+                    require(msg.sender == ownerOf(reveresedMapper[tokenIds[i]]), "Bruh.. you dont own that");
                     safeTransferFrom(address(this), msg.sender, reveresedMapper[tokenIds[i]]);
                 }
             }
