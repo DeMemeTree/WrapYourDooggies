@@ -230,7 +230,8 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     // An empty struct value does not necessarily mean the token is unowned. See _ownershipOf implementation for details.
     mapping(uint256 => TokenOwnership) internal _ownerships;
 
-    mapping(uint256 => uint256) internal reveresedMapper;
+    mapping(uint64 => uint256) internal wrappedMapper;
+    mapping(uint256 => uint64) internal reveresedMapper;
 
     // Mapping owner address to address data
     mapping(address => AddressData) private _addressData;
@@ -498,7 +499,9 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
 
             if (safe && to.isContract()) {
                 do {
-                    reveresedMapper[idsToWrap[wrapCounter]] = updatedIndex;
+                    uint256 idToWrap = idsToWrap[wrapCounter];
+                    wrappedMapper[uint64(updatedIndex)] = idToWrap;
+                    reveresedMapper[idToWrap] = uint64(updatedIndex);
                     wrapCounter++;
                     emit Transfer(address(0), to, updatedIndex);
                     if (!_checkContractOnERC721Received(address(0), to, updatedIndex++, _data)) {
@@ -509,7 +512,9 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
                 if (_currentIndex != startTokenId) revert();
             } else {
                 do {
-                    reveresedMapper[idsToWrap[wrapCounter]] = updatedIndex;
+                    uint256 idToWrap = idsToWrap[wrapCounter];
+                    wrappedMapper[uint64(updatedIndex)] = idToWrap;
+                    reveresedMapper[idToWrap] = uint64(updatedIndex);
                     wrapCounter++;
                     emit Transfer(address(0), to, updatedIndex++);
                 } while (updatedIndex != end);
@@ -737,7 +742,7 @@ contract WrapYourDooggies is ERC721A, ReentrancyGuard, IERC721Receiver, IERC1155
         override
         returns (string memory)
     {
-        return string(abi.encodePacked(baseURI, Strings.toString(tokenId), ".json")); 
+        return string(abi.encodePacked(baseURI, Strings.toString(wrappedMapper[uint64(tokenId)]), ".json")); 
     }
 
     function setURI(string calldata _baseURI) external {
