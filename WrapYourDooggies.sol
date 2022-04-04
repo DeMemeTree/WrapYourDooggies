@@ -829,8 +829,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     string private baseURIForOGDooggies = "";
 
-    mapping(address => uint) private stakeCountForOwner;
-
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
 
     constructor(address dooggiesContract) ERC721("Dooggies", "Dooggies", dooggiesContract) {
@@ -897,13 +895,14 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
             dooggies.safeBatchTransferFrom(msg.sender, address(this), tokenIds, qty, "");
 
-            stakeCountForOwner[msg.sender] += count;
-
             for(uint i = 0; i < count; i++) {
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
                 _owners[tokenIds[i]] = msg.sender;
                 idStakeLockTimes[tokenIds[i]] = block.timestamp;
+                // lol so it shows up on Opensea xD
+                // since we want to funnel people here on first wrap :)
+                emit Transfer(address(this), address(this), tokenIds[i]);
             }
         }
     }
@@ -915,8 +914,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
                 safeTransferFrom(address(this), msg.sender, tokenIds[i]);
             }
-
-            stakeCountForOwner[msg.sender] += count;
 
             for(uint i = 0; i < count; i++) {
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
@@ -931,8 +928,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     function unStakeMany(uint[] calldata tokenIds) nonReentrant external {
         unchecked {
             uint count = tokenIds.length;
-
-            stakeCountForOwner[msg.sender] -= count;
 
             for(uint i = 0; i < count; i++) {
                 require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
@@ -963,7 +958,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
                 }
             }
             require(amountToMint > 0, "Need to have some to mint");
-            stakeCountForOwner[msg.sender] -= amountToMint;
 
             dooggiesSnack.mint(amountToMint, msg.sender);
         }
