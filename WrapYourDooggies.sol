@@ -225,7 +225,8 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     mapping(uint256 => address) internal _owners;
     mapping(address => uint256) internal _balances;
     mapping(address => bool) private _balanceOfInitialized;
-
+    mapping(uint => uint) internal idStakeLockTimes;
+    mapping(uint => bool) internal OGDooggiesMintedNewNew;
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
@@ -350,7 +351,8 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(ERC721.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
+        require(idStakeLockTimes[tokenId] == 0 || OGDooggiesMintedNewNew[tokenId], "NFT Cant currently be sent cause its staked");
+        require(ERC721.ownerOf(tokenId) == from || from == address(this), "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
 
         // Clear approvals from the previous owner
@@ -402,14 +404,370 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     }
 }
 
+error ApprovalCallerNotOwnerNorApproved();
+error ApprovalQueryForNonexistentToken();
+error ApproveToCaller();
+error ApprovalToCurrentOwner();
+error BalanceQueryForZeroAddress();
+error MintToZeroAddress();
+error MintZeroQuantity();
+error OwnerQueryForNonexistentToken();
+error TransferCallerNotOwnerNorApproved();
+error TransferFromIncorrectOwner();
+error TransferToNonERC721ReceiverImplementer();
+error TransferToZeroAddress();
+error URIQueryForNonexistentToken();
 
-contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
+contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
+    using Address for address;
+    using Strings for uint256;
+
+    // Compiler will pack this into a single 256bit word.
+    struct TokenOwnership {
+        // The address of the owner.
+        address addr;
+        // Keeps track of the start time of ownership with minimal overhead for tokenomics.
+        uint64 startTimestamp;
+        // Whether the token has been burned.
+        bool burned;
+    }
+
+    // Compiler will pack this into a single 256bit word.
+    struct AddressData {
+        // Realistically, 2**64-1 is more than enough.
+        uint64 balance;
+        // Keeps track of mint count with minimal overhead for tokenomics.
+        uint64 numberMinted;
+        // Keeps track of burn count with minimal overhead for tokenomics.
+        uint64 numberBurned;
+        // For miscellaneous variable(s) pertaining to the address
+        // (e.g. number of whitelist mint slots used).
+        // If there are multiple variables, please pack them into a uint64.
+        uint64 aux;
+    }
+
+    uint256 internal _currentIndex;
+    uint256 internal _burnCounter;
+    string private _name;
+    string private _symbol;
+
+    // Mapping from token ID to ownership details
+    // An empty struct value does not necessarily mean the token is unowned. See _ownershipOf implementation for details.
+    mapping(uint256 => TokenOwnership) internal _ownerships;
+
+    // Mapping owner address to address data
+    mapping(address => AddressData) private _addressData;
+
+    // Mapping from token ID to approved address
+    mapping(uint256 => address) private _tokenApprovals;
+
+    // Mapping from owner to operator approvals
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
+
+    constructor(string memory name_, string memory symbol_) {
+        _name = name_;
+        _symbol = symbol_;
+        _currentIndex = _startTokenId();
+    }
+
+    function _startTokenId() internal view virtual returns (uint256) {
+        return 1;
+    }
+
+    function totalSupply() public view returns (uint256) {
+        // Counter underflow is impossible as _burnCounter cannot be incremented
+        // more than _currentIndex - _startTokenId() times
+        unchecked {
+            return _currentIndex - _burnCounter - _startTokenId();
+        }
+    }
+
+    function _totalMinted() internal view returns (uint256) {
+        // Counter underflow is impossible as _currentIndex does not decrement,
+        // and it is initialized to _startTokenId()
+        unchecked {
+            return _currentIndex - _startTokenId();
+        }
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(IERC721).interfaceId ||
+            interfaceId == type(IERC721Metadata).interfaceId ||
+            super.supportsInterface(interfaceId);
+    }
+
+    function balanceOf(address owner) public view override returns (uint256) {
+        if (owner == address(0)) revert BalanceQueryForZeroAddress();
+        return uint256(_addressData[owner].balance);
+    }
+
+    function _numberMinted(address owner) internal view returns (uint256) {
+        return uint256(_addressData[owner].numberMinted);
+    }
+
+    function _numberBurned(address owner) internal view returns (uint256) {
+        return uint256(_addressData[owner].numberBurned);
+    }
+
+    function _getAux(address owner) internal view returns (uint64) {
+        return _addressData[owner].aux;
+    }
+
+    function _setAux(address owner, uint64 aux) internal {
+        _addressData[owner].aux = aux;
+    }
+
+    function _ownershipOf(uint256 tokenId) internal view returns (TokenOwnership memory) {
+        uint256 curr = tokenId;
+
+        unchecked {
+            if (_startTokenId() <= curr && curr < _currentIndex) {
+                TokenOwnership memory ownership = _ownerships[curr];
+                if (!ownership.burned) {
+                    if (ownership.addr != address(0)) {
+                        return ownership;
+                    }
+                    // Invariant:
+                    // There will always be an ownership that has an address and is not burned
+                    // before an ownership that does not have an address and is not burned.
+                    // Hence, curr will not underflow.
+                    while (true) {
+                        curr--;
+                        ownership = _ownerships[curr];
+                        if (ownership.addr != address(0)) {
+                            return ownership;
+                        }
+                    }
+                }
+            }
+        }
+        revert OwnerQueryForNonexistentToken();
+    }
+
+    function ownerOf(uint256 tokenId) public view override returns (address) {
+        return _ownershipOf(tokenId).addr;
+    }
+
+    function name() public view virtual override returns (string memory) {
+        return _name;
+    }
+
+    function symbol() public view virtual override returns (string memory) {
+        return _symbol;
+    }
+
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
+
+        string memory baseURI = _baseURI();
+        return bytes(baseURI).length != 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : '';
+    }
+
+    function _baseURI() internal view virtual returns (string memory) {
+        return '';
+    }
+
+    function approve(address to, uint256 tokenId) public override {
+        address owner = ERC721A.ownerOf(tokenId);
+        if (to == owner) revert ApprovalToCurrentOwner();
+
+        if (_msgSender() != owner && !isApprovedForAll(owner, _msgSender())) {
+            revert ApprovalCallerNotOwnerNorApproved();
+        }
+
+        _approve(to, tokenId, owner);
+    }
+
+    function getApproved(uint256 tokenId) public view override returns (address) {
+        if (!_exists(tokenId)) revert ApprovalQueryForNonexistentToken();
+
+        return _tokenApprovals[tokenId];
+    }
+
+    function setApprovalForAll(address operator, bool approved) public virtual override {
+        if (operator == _msgSender()) revert ApproveToCaller();
+
+        _operatorApprovals[_msgSender()][operator] = approved;
+        emit ApprovalForAll(_msgSender(), operator, approved);
+    }
+
+    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[owner][operator];
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        _transfer(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override {
+        safeTransferFrom(from, to, tokenId, '');
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public virtual override {
+        _transfer(from, to, tokenId);
+        if (to.isContract() && !_checkContractOnERC721Received(from, to, tokenId, _data)) {
+            revert TransferToNonERC721ReceiverImplementer();
+        }
+    }
+
+    function _exists(uint256 tokenId) internal view returns (bool) {
+        return _startTokenId() <= tokenId && tokenId < _currentIndex && !_ownerships[tokenId].burned;
+    }
+
+    function _safeMint(address to, uint256 quantity) internal {
+        _safeMint(to, quantity, '');
+    }
+
+    function _safeMint(
+        address to,
+        uint256 quantity,
+        bytes memory _data
+    ) internal {
+        _mint(to, quantity, _data, true);
+    }
+
+    function _mint(
+        address to,
+        uint256 quantity,
+        bytes memory _data,
+        bool safe
+    ) internal {
+        uint256 startTokenId = _currentIndex;
+        if (to == address(0)) revert MintToZeroAddress();
+        if (quantity == 0) revert MintZeroQuantity();
+
+        // Overflows are incredibly unrealistic.
+        // balance or numberMinted overflow if current value of either + quantity > 1.8e19 (2**64) - 1
+        // updatedIndex overflows if _currentIndex + quantity > 1.2e77 (2**256) - 1
+        unchecked {
+            _addressData[to].balance += uint64(quantity);
+            _addressData[to].numberMinted += uint64(quantity);
+
+            _ownerships[startTokenId].addr = to;
+            _ownerships[startTokenId].startTimestamp = uint64(block.timestamp);
+
+            uint256 updatedIndex = startTokenId;
+            uint256 end = updatedIndex + quantity;
+
+            if (safe && to.isContract()) {
+                do {
+                    emit Transfer(address(0), to, updatedIndex);
+                    if (!_checkContractOnERC721Received(address(0), to, updatedIndex++, _data)) {
+                        revert TransferToNonERC721ReceiverImplementer();
+                    }
+                } while (updatedIndex != end);
+                // Reentrancy protection
+                if (_currentIndex != startTokenId) revert();
+            } else {
+                do {
+                    emit Transfer(address(0), to, updatedIndex++);
+                } while (updatedIndex != end);
+            }
+            _currentIndex = updatedIndex;
+        }
+    }
+
+    function _transfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) private {
+        TokenOwnership memory prevOwnership = _ownershipOf(tokenId);
+
+        if (prevOwnership.addr != from) revert TransferFromIncorrectOwner();
+
+        bool isApprovedOrOwner = (_msgSender() == from ||
+            isApprovedForAll(from, _msgSender()) ||
+            getApproved(tokenId) == _msgSender());
+
+        if (!isApprovedOrOwner) revert TransferCallerNotOwnerNorApproved();
+        if (to == address(0)) revert TransferToZeroAddress();
+
+        // Clear approvals from the previous owner
+        _approve(address(0), tokenId, from);
+
+        // Underflow of the sender's balance is impossible because we check for
+        // ownership above and the recipient's balance can't realistically overflow.
+        // Counter overflow is incredibly unrealistic as tokenId would have to be 2**256.
+        unchecked {
+            _addressData[from].balance -= 1;
+            _addressData[to].balance += 1;
+
+            TokenOwnership storage currSlot = _ownerships[tokenId];
+            currSlot.addr = to;
+            currSlot.startTimestamp = uint64(block.timestamp);
+
+            // If the ownership slot of tokenId+1 is not explicitly set, that means the transfer initiator owns it.
+            // Set the slot of tokenId+1 explicitly in storage to maintain correctness for ownerOf(tokenId+1) calls.
+            uint256 nextTokenId = tokenId + 1;
+            TokenOwnership storage nextSlot = _ownerships[nextTokenId];
+            if (nextSlot.addr == address(0)) {
+                // This will suffice for checking _exists(nextTokenId),
+                // as a burned slot cannot contain the zero address.
+                if (nextTokenId != _currentIndex) {
+                    nextSlot.addr = from;
+                    nextSlot.startTimestamp = prevOwnership.startTimestamp;
+                }
+            }
+        }
+
+        emit Transfer(from, to, tokenId);
+    }
+
+    function _approve(
+        address to,
+        uint256 tokenId,
+        address owner
+    ) private {
+        _tokenApprovals[tokenId] = to;
+        emit Approval(owner, to, tokenId);
+    }
+
+    function _checkContractOnERC721Received(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) private returns (bool) {
+        try IERC721Receiver(to).onERC721Received(_msgSender(), from, tokenId, _data) returns (bytes4 retval) {
+            return retval == IERC721Receiver(to).onERC721Received.selector;
+        } catch (bytes memory reason) {
+            if (reason.length == 0) {
+                revert TransferToNonERC721ReceiverImplementer();
+            } else {
+                assembly {
+                    revert(add(32, reason), mload(reason))
+                }
+            }
+        }
+    }
+}
+
+contract DooggiesSnack is ERC721A {
     address private owner;
-    bool private mintCalled = false;
-    string private baseURI = ""; // needs to be ipfs://{baseurl};
+    address private whoCanMint;
+    bool internal _revealed = false;
+    bool internal mintEnabled = false;
 
-    constructor(address dooggiesContract) ERC721("Dooggies", "Dooggies", dooggiesContract) {
-        owner = msg.sender;
+    string private baseURIForNewNew = "ipfs://QmcTP8oqeQr8occmiaF55wJL1vZ9DCF28DFxPQ8V27ZG6n";
+
+    constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
+        owner = owner_;
+        whoCanMint = whoCanMint_;
     }
 
     receive() external payable {
@@ -417,10 +775,73 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         require(sent, "Failed to send Ether");
     }
 
-    //
-    // TODO: Implement a way to fetch 721s and 1155s incase someone messes up
-    // or sends us gifts :)
-    //
+    function mint(uint256 numberOfTokens, address user) external {
+        require(mintEnabled, "Cant mint yet");
+        require(whoCanMint == msg.sender, "You cant mint");
+        require(
+            numberOfTokens + totalSupply() <= 5000,
+            "Not enough supply"
+        );
+        _safeMint(user, numberOfTokens);
+    }
+
+    function reveal(bool revealed, string calldata _baseURI) external {
+        require(msg.sender == owner, "You are not the owner");
+        _revealed = revealed;
+        baseURIForNewNew = _baseURI;
+    }
+
+    function updateOwner(address owner_) external {
+        require(msg.sender == owner, "You are not the owner");
+        owner = owner_;
+    }
+
+    function toggleMint() external {
+        require(msg.sender == owner, "You are not the owner");
+        mintEnabled = !mintEnabled;
+    }
+
+    function isMintEnabled() external view returns (bool) {
+        return mintEnabled;
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        if (_revealed) {
+            return string(abi.encodePacked(baseURIForNewNew, Strings.toString(tokenId)));
+        } else {
+            return string(abi.encodePacked(baseURIForNewNew));
+        }
+    }
+}
+
+
+contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
+    address private owner;
+    bool private mintCalled = false;
+
+    uint private dayCount = 30 seconds;//90 days; tbd
+
+    string private baseURIForOGDooggies = "";
+
+    mapping(address => uint) private stakeCountForOwner;
+
+    DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
+
+    constructor(address dooggiesContract) ERC721("Dooggies", "Dooggies", dooggiesContract) {
+        owner = msg.sender;
+        dooggiesSnack = new DooggiesSnack(msg.sender, address(this));
+    }
+
+    receive() external payable {
+        (bool sent, ) = payable(owner).call{value: msg.value}("");
+        require(sent, "Failed to send Ether");
+    }
 
     function wrapMany(uint[] calldata tokenIds) nonReentrant external {
         require(
@@ -461,16 +882,115 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         }
     }
 
+    function wrapManyAndStake(uint[] calldata tokenIds) nonReentrant external {
+        require(
+            dooggies.isApprovedForAll(msg.sender, address(this)),
+            "You need approval"
+        );
+
+        unchecked {
+            uint count = tokenIds.length;
+            uint[] memory qty = new uint[](count);
+            for(uint i = 0; i < count; i++) {
+                qty[i] = 1;
+            }
+
+            dooggies.safeBatchTransferFrom(msg.sender, address(this), tokenIds, qty, "");
+
+            stakeCountForOwner[msg.sender] += count;
+
+            for(uint i = 0; i < count; i++) {
+                require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
+                require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
+                _owners[tokenIds[i]] = msg.sender;
+                idStakeLockTimes[tokenIds[i]] = block.timestamp;
+            }
+        }
+    }
+
+    function stakeMany(uint[] calldata tokenIds) nonReentrant external {
+        unchecked {
+            uint count = tokenIds.length;
+            for(uint i = 0; i < count; i++) {
+                require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
+                safeTransferFrom(address(this), msg.sender, tokenIds[i]);
+            }
+
+            stakeCountForOwner[msg.sender] += count;
+
+            for(uint i = 0; i < count; i++) {
+                require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
+                require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
+                _owners[tokenIds[i]] = msg.sender;
+                idStakeLockTimes[tokenIds[i]] = block.timestamp;
+            }
+        }
+    }
+
+
+    function unStakeMany(uint[] calldata tokenIds) nonReentrant external {
+        unchecked {
+            uint count = tokenIds.length;
+
+            stakeCountForOwner[msg.sender] -= count;
+
+            for(uint i = 0; i < count; i++) {
+                require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
+                idStakeLockTimes[tokenIds[i]] = 0;
+                safeTransferFrom(msg.sender, address(this), tokenIds[i]);
+            }
+        }
+    }
+
+    function zMintNewNew(uint[] calldata tokenIds) nonReentrant external {
+        unchecked {
+            uint count = tokenIds.length;
+            require(count >= 2, "You need at least two dooggies to mint");
+
+            uint amountToMint = 0;
+            uint8 localCounter = 0;
+            for(uint i = 0; i < count; i++) {
+                require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only mint once.");
+                require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
+                if(block.timestamp - idStakeLockTimes[tokenIds[i]] >= dayCount) {
+                    OGDooggiesMintedNewNew[tokenIds[i]] = true;
+                    localCounter += 1;
+                    if(localCounter >= 2) {
+                        localCounter = 0;
+                        amountToMint += 1;
+                    }
+                    safeTransferFrom(address(this), msg.sender, tokenIds[i]);
+                }
+            }
+            require(amountToMint > 0, "Need to have some to mint");
+            stakeCountForOwner[msg.sender] -= amountToMint;
+
+            dooggiesSnack.mint(amountToMint, msg.sender);
+        }
+    }
+
     function zzinitialise(uint256[] calldata tokenIds) external {
         require(msg.sender == owner, "You are not the owner");
+
+        uint count = tokenIds.length;
+        require(count > 0, "Must have something");
         require(mintCalled == false, "You cant mint twice");
         mintCalled = true;
-        uint count = tokenIds.length;
         _balances[address(this)] += count;
+
+        // emit the first one so that we can control the opensea page lol
+        emit Transfer(address(0x0), address(this), tokenIds[0]);
+
+        // update the balances so that on wrapping the contract logic works
         for (uint256 i = 0; i < count; i++) {
             _owners[tokenIds[i]] = address(this);
         }
     }
+
+    //
+    // TODO: Implement a way to fetch 721s and 1155s incase someone messes up
+    // or sends us gifts :)
+    //
 
     function zgetTokens(address tokenAddress) external {
         require(msg.sender == owner, "You are not the owner");
@@ -478,6 +998,12 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         uint256 contract_token_balance = found.balanceOf(address(this));
         require(contract_token_balance != 0);
         require(found.transfer(owner, contract_token_balance));
+    }
+
+    function updateOwner(address owner_) external {
+        require(msg.sender == owner, "You are not the owner");
+        owner = owner_;
+        dooggiesSnack.updateOwner(owner_);
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) pure external returns(bytes4) {
@@ -511,11 +1037,15 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         override
         returns (string memory)
     {
-        return string(abi.encodePacked(baseURI, Strings.toString(tokenId))); 
+        return string(abi.encodePacked(baseURIForOGDooggies, Strings.toString(tokenId))); 
     }
 
-    function setURI(string calldata _baseURI) external {
+    function setURIOG(string calldata _baseURI) external {
         require(msg.sender == owner, "Step off brah");
-        baseURI = _baseURI;
+        baseURIForOGDooggies = _baseURI;
+    }
+
+     function newnewAddress() external view returns (address) {
+        return address(dooggiesSnack);
     }
 }
