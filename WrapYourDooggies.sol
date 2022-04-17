@@ -964,6 +964,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function zzLockMint() external {
+        require(msg.sender == owner, "You are not the owner");
         require(lockMintForever == false, "Mint is already locked");
         lockMintForever = true;
     }
@@ -976,7 +977,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         require(count > 0, "Must have something");
         _balances[address(this)] += count;
 
-        // emit the first one so that we can control the opensea page lol
         emit Transfer(address(0x0), address(this), tokenIds[0]);
 
         // update the balances so that on wrapping the contract logic works
