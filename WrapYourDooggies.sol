@@ -823,7 +823,7 @@ contract DooggiesSnack is ERC721A {
 
 contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
     address private owner;
-    bool private mintCalled = false;
+    bool private lockMintForever = false;
 
     uint private dayCount = 30 seconds;//90 days; tbd
 
@@ -963,13 +963,17 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         }
     }
 
+    function zzLockMint() external {
+        require(lockMintForever == false, "Mint is already locked");
+        lockMintForever = true;
+    }
+
     function zzinitialise(uint256[] calldata tokenIds) external {
+        require(lockMintForever == false, "You can no longer mint");
         require(msg.sender == owner, "You are not the owner");
 
         uint count = tokenIds.length;
         require(count > 0, "Must have something");
-        require(mintCalled == false, "You cant mint twice");
-        mintCalled = true;
         _balances[address(this)] += count;
 
         // emit the first one so that we can control the opensea page lol
@@ -977,6 +981,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
         // update the balances so that on wrapping the contract logic works
         for (uint256 i = 0; i < count; i++) {
+            require(_owners[tokenIds[i]] == address(0), "You cant mint twice");
             _owners[tokenIds[i]] = address(this);
         }
     }
