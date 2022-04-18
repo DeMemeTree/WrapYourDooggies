@@ -1,6 +1,31 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+//  ▄▄▄▄▄▄  ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ 
+// █      ██       █       █       █       █   █       █       █
+// █  ▄    █   ▄   █   ▄   █   ▄▄▄▄█   ▄▄▄▄█   █    ▄▄▄█  ▄▄▄▄▄█
+// █ █ █   █  █ █  █  █ █  █  █  ▄▄█  █  ▄▄█   █   █▄▄▄█ █▄▄▄▄▄ 
+// █ █▄█   █  █▄█  █  █▄█  █  █ █  █  █ █  █   █    ▄▄▄█▄▄▄▄▄  █
+// █       █       █       █  █▄▄█ █  █▄▄█ █   █   █▄▄▄ ▄▄▄▄▄█ █
+// █▄▄▄▄▄▄██▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄▄▄█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█
+//
+//  ▄▄   ▄▄ ▄▄▄▄▄▄ ▄▄▄▄▄▄  ▄▄▄▄▄▄▄    ▄     ▄ ▄▄▄ ▄▄▄▄▄▄▄ ▄▄   ▄▄ 
+// █  █▄█  █      █      ██       █  █ █ ▄ █ █   █       █  █ █  █
+// █       █  ▄   █  ▄    █    ▄▄▄█  █ ██ ██ █   █▄     ▄█  █▄█  █
+// █       █ █▄█  █ █ █   █   █▄▄▄   █       █   █ █   █ █       █
+// █       █      █ █▄█   █    ▄▄▄█  █       █   █ █   █ █   ▄   █
+// █ ██▄██ █  ▄   █       █   █▄▄▄   █   ▄   █   █ █   █ █  █ █  █
+// █▄█   █▄█▄█ █▄▄█▄▄▄▄▄▄██▄▄▄▄▄▄▄█  █▄▄█ █▄▄█▄▄▄█ █▄▄▄█ █▄▄█ █▄▄█
+//
+//  ▄▄▄     ▄▄▄▄▄▄▄ ▄▄   ▄▄ ▄▄▄▄▄▄▄ 
+// █   █   █       █  █ █  █       █
+// █   █   █   ▄   █  █▄█  █    ▄▄▄█
+// █   █   █  █ █  █       █   █▄▄▄ 
+// █   █▄▄▄█  █▄█  █       █    ▄▄▄█
+// █       █       ██     ██   █▄▄▄ 
+// █▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█ █▄▄▄█ █▄▄▄▄▄▄▄█
+//
+
+pragma solidity 0.8.10;
 
 interface IERC165 {
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -763,7 +788,7 @@ contract DooggiesSnack is ERC721A {
     bool internal _revealed = false;
     bool internal mintEnabled = false;
 
-    string private baseURIForNewNew = "ipfs://QmcTP8oqeQr8occmiaF55wJL1vZ9DCF28DFxPQ8V27ZG6n";
+    string private baseURIForNewNew = "ipfs://QmNQ7ouYgPbLJ2hYcuMA8RZ8CwAG7tQwMzaKe4cnJMCPHA";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
         owner = owner_;
@@ -819,7 +844,6 @@ contract DooggiesSnack is ERC721A {
         }
     }
 }
-
 
 contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
     address private owner;
