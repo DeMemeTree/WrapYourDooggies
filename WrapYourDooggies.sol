@@ -787,6 +787,7 @@ contract DooggiesSnack is ERC721A {
     address private whoCanMint;
     bool internal _revealed = false;
     bool internal mintEnabled = false;
+    bool private lockIPFSForever = false;
 
     string private baseURIForNewNew = "ipfs://QmNQ7ouYgPbLJ2hYcuMA8RZ8CwAG7tQwMzaKe4cnJMCPHA";
     string private baseExt = ".json";
@@ -813,6 +814,7 @@ contract DooggiesSnack is ERC721A {
 
     function reveal(bool revealed, string calldata _baseURI) external {
         require(msg.sender == owner, "You are not the owner");
+        require(lockIPFSForever == false, "IPFS is locked");
         _revealed = revealed;
         baseURIForNewNew = _baseURI;
     }
@@ -834,6 +836,12 @@ contract DooggiesSnack is ERC721A {
 
     function isMintEnabled() external view returns (bool) {
         return mintEnabled;
+    }
+
+    function zzLockIPFS() external {
+        require(msg.sender == owner, "You are not the owner");
+        require(lockIPFSForever == false, "IPFS is already locked");
+        lockIPFSForever = true;
     }
 
     function tokenURI(uint256 tokenId)
