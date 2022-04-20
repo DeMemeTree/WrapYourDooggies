@@ -789,6 +789,7 @@ contract DooggiesSnack is ERC721A {
     bool internal mintEnabled = false;
 
     string private baseURIForNewNew = "ipfs://QmNQ7ouYgPbLJ2hYcuMA8RZ8CwAG7tQwMzaKe4cnJMCPHA";
+    string private baseExt = ".json";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
         owner = owner_;
@@ -816,6 +817,11 @@ contract DooggiesSnack is ERC721A {
         baseURIForNewNew = _baseURI;
     }
 
+    function setExtension(string calldata _baseExt) external {
+        require(msg.sender == owner, "You are not the owner");
+        baseExt = _baseExt;
+    }
+
     function updateOwner(address owner_) external {
         require(msg.sender == owner, "You are not the owner");
         owner = owner_;
@@ -838,7 +844,7 @@ contract DooggiesSnack is ERC721A {
         returns (string memory)
     {
         if (_revealed) {
-            return string(abi.encodePacked(baseURIForNewNew, Strings.toString(tokenId)));
+            return string(abi.encodePacked(baseURIForNewNew, Strings.toString(tokenId), baseExt));
         } else {
             return string(abi.encodePacked(baseURIForNewNew));
         }
@@ -848,6 +854,7 @@ contract DooggiesSnack is ERC721A {
 contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
     address private owner;
     bool private lockMintForever = false;
+    bool private lockIPFSForever = false;
 
     uint private dayCount = 30 seconds;//90 days; tbd
 
@@ -993,6 +1000,12 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         lockMintForever = true;
     }
 
+    function zzLockIPFS() external {
+        require(msg.sender == owner, "You are not the owner");
+        require(lockIPFSForever == false, "IPFS is already locked");
+        lockIPFSForever = true;
+    }
+
     function zzinitialise(uint256[] calldata tokenIds) external {
         require(lockMintForever == false, "You can no longer mint");
         require(msg.sender == owner, "You are not the owner");
@@ -1065,6 +1078,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     function setURIOG(string calldata _baseURI) external {
         require(msg.sender == owner, "Step off brah");
+        require(lockIPFSForever == false, "IPFS is locked");
         baseURIForOGDooggies = _baseURI;
     }
 
