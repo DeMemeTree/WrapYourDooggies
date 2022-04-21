@@ -943,8 +943,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         unchecked {
             uint count = tokenIds.length;
             for(uint i = 0; i < count; i++) {
-                require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
-                safeTransferFrom(address(this), msg.sender, tokenIds[i]);
+                require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
+                safeTransferFrom(msg.sender, address(this), tokenIds[i]);
             }
 
             for(uint i = 0; i < count; i++) {
@@ -964,7 +964,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             for(uint i = 0; i < count; i++) {
                 require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
                 idStakeLockTimes[tokenIds[i]] = 0;
-                safeTransferFrom(msg.sender, address(this), tokenIds[i]);
+                safeTransferFrom(address(this), msg.sender, tokenIds[i]);
             }
         }
     }
