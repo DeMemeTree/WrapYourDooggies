@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-//
 //  ▄▄▄▄▄▄  ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄ 
 // █      ██       █       █       █       █   █       █       █
 // █  ▄    █   ▄   █   ▄   █   ▄▄▄▄█   ▄▄▄▄█   █    ▄▄▄█  ▄▄▄▄▄█
@@ -859,7 +858,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     uint private dayCount = 30 seconds;//60 days;
 
-    string private baseURIForOGDooggies = "";
+    string private baseURIForOGDooggies = "ipfs://QmQpg9czXein8WHbnbsnoebpg8kxNXfU51HxvGosRkrAQj/";
     string private baseExt = ".json";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
