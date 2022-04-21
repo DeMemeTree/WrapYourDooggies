@@ -854,10 +854,12 @@ contract DooggiesSnack is ERC721A {
 contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
     address private owner;
     bool private lockMintForever = false;
+    uint private totalAmount = 0;
 
-    uint private dayCount = 30 seconds;//90 days; tbd
+    uint private dayCount = 30 seconds;//60 days;
 
     string private baseURIForOGDooggies = "";
+    string private baseExt = ".json";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
 
@@ -1009,6 +1011,10 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
         emit Transfer(address(0x0), address(this), tokenIds[0]);
 
+        unchecked {
+            totalAmount += count;
+        }
+
         // update the balances so that on wrapping the contract logic works
         for (uint256 i = 0; i < count; i++) {
             require(_owners[tokenIds[i]] == address(0), "You cant mint twice");
@@ -1016,10 +1022,19 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         }
     }
 
-    //
-    // TODO: Implement a way to fetch 721s and 1155s incase someone messes up
-    // or sends us gifts :)
-    //
+    function zget721(address tokenAddress, uint tokenID) external {
+        require(msg.sender == owner, "You are not the owner");
+        require(tokenAddress != address(this), "Bruh not even you can steal these");
+        IERC721 found = IERC721(tokenAddress);
+        found.safeTransferFrom(address(this), msg.sender, tokenID);
+    }
+
+    function zget1155(address tokenAddress, uint tokenID) external {
+        require(msg.sender == owner, "You are not the owner");
+        require(tokenAddress != address(dooggies), "Bruh not even you can steal these");
+        IERC1155 found = IERC1155(tokenAddress);
+        found.safeTransferFrom(address(this), msg.sender, tokenID, 1, "");
+    }
 
     function zgetTokens(address tokenAddress) external {
         require(msg.sender == owner, "You are not the owner");
@@ -1032,7 +1047,11 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     function updateOwner(address owner_) external {
         require(msg.sender == owner, "You are not the owner");
         owner = owner_;
-        dooggiesSnack.updateOwner(owner_);
+    }
+
+    function setExtension(string calldata _baseExt) external {
+        require(msg.sender == owner, "You are not the owner");
+        baseExt = _baseExt;
     }
 
     function onERC721Received(address, address, uint256, bytes calldata) pure external returns(bytes4) {
@@ -1066,7 +1085,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         override
         returns (string memory)
     {
-        return string(abi.encodePacked(baseURIForOGDooggies, Strings.toString(tokenId))); 
+        return string(abi.encodePacked(baseURIForOGDooggies, Strings.toString(tokenId), baseExt)); 
     }
 
     function setURIOG(string calldata _baseURI) external {
@@ -1074,7 +1093,19 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         baseURIForOGDooggies = _baseURI;
     }
 
-     function newnewAddress() external view returns (address) {
+    function newnewAddress() external view returns (address) {
         return address(dooggiesSnack);
+    }
+
+    function timeLeftForID(uint tokenID) external view returns (uint) {
+        if((block.timestamp - idStakeLockTimes[tokenID]) < dayCount) {
+            return dayCount - (block.timestamp - idStakeLockTimes[tokenID]);
+        } else {
+            return 0;
+        }
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return totalAmount;
     }
 }
