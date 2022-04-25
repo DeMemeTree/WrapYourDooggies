@@ -1093,6 +1093,10 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         baseURIForOGDooggies = _baseURI;
     }
 
+    function totalSupply() public view returns (uint256) {
+        return totalAmount;
+    }
+
     function newnewAddress() external view returns (address) {
         return address(dooggiesSnack);
     }
@@ -1103,10 +1107,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         } else {
             return 0;
         }
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return totalAmount;
     }
 
     function hasIDBeenMinted(uint tokenID) public view returns (bool) {
