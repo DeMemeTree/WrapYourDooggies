@@ -930,6 +930,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             for(uint i = 0; i < count; i++) {
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
+                require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
                 _owners[tokenIds[i]] = msg.sender;
                 idStakeLockTimes[tokenIds[i]] = block.timestamp;
                 // lol so it shows up on Opensea xD
@@ -950,6 +951,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             for(uint i = 0; i < count; i++) {
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
+                require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
                 _owners[tokenIds[i]] = msg.sender;
                 idStakeLockTimes[tokenIds[i]] = block.timestamp;
             }
@@ -963,6 +965,9 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
             for(uint i = 0; i < count; i++) {
                 require(msg.sender == ownerOf(tokenIds[i]), "Bruh.. you dont own that");
+                require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
+                require(idStakeLockTimes[tokenIds[i]] != 0, "Bruh.. this is not staked");
+
                 idStakeLockTimes[tokenIds[i]] = 0;
                 safeTransferFrom(address(this), msg.sender, tokenIds[i]);
             }
