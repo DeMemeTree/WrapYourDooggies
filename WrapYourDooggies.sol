@@ -1121,4 +1121,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     function isStaked(uint tokenID) public view returns (bool) {
         return idStakeLockTimes[tokenID] != 0 && OGDooggiesMintedNewNew[tokenID] == false;
     }
+
+    function isMintLocked() public view returns (bool) {
+        return lockMintForever;
+    }
 }
