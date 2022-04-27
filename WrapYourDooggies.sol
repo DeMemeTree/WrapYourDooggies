@@ -493,6 +493,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         _name = name_;
         _symbol = symbol_;
         _currentIndex = _startTokenId();
+        _burnCounter = 0;
     }
 
     function _startTokenId() internal view virtual returns (uint256) {
@@ -788,7 +789,7 @@ contract DooggiesSnack is ERC721A {
     bool internal _revealed = false;
     bool internal mintEnabled = false;
 
-    string private baseURIForNewNew = "ipfs://QmNQ7ouYgPbLJ2hYcuMA8RZ8CwAG7tQwMzaKe4cnJMCPHA";
+    string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
     string private baseExt = ".json";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
