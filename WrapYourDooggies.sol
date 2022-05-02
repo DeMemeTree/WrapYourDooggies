@@ -105,12 +105,6 @@ interface IERC721Receiver {
     ) external returns (bytes4);
 }
 
-interface IERC721Enumerable is IERC721 {
-    function totalSupply() external view returns (uint256);
-    function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256);
-    function tokenByIndex(uint256 index) external view returns (uint256);
-}
-
 interface IERC20 {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
@@ -199,31 +193,6 @@ library Strings {
         }
         return string(buffer);
     }
-
-    function toHexString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0x00";
-        }
-        uint256 temp = value;
-        uint256 length = 0;
-        while (temp != 0) {
-            length++;
-            temp >>= 8;
-        }
-        return toHexString(value, length);
-    }
-
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
-        bytes memory buffer = new bytes(2 * length + 2);
-        buffer[0] = "0";
-        buffer[1] = "x";
-        for (uint256 i = 2 * length + 1; i > 1; --i) {
-            buffer[i] = _HEX_SYMBOLS[value & 0xf];
-            value >>= 4;
-        }
-        require(value == 0, "Strings: hex length insufficient");
-        return string(buffer);
-    }
 }
 
 interface IERC721Metadata is IERC721 {
@@ -249,7 +218,6 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
 
     mapping(uint256 => address) internal _owners;
     mapping(address => uint256) internal _balances;
-    mapping(address => bool) private _balanceOfInitialized;
     mapping(uint => uint) internal idStakeLockTimes;
     mapping(uint => bool) internal OGDooggiesMintedNewNew;
     mapping(uint256 => address) private _tokenApprovals;
@@ -268,7 +236,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
             super.supportsInterface(interfaceId);
     }
 
-    function balanceOf(address owner) public view virtual override returns (uint256) {
+    function balanceOf(address owner) external view virtual override returns (uint256) {
         require(owner != address(0), "ERC721: address zero is not a valid owner");
         return _balances[owner];
     }
@@ -279,11 +247,11 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
         return owner;
     }
 
-    function name() public view virtual override returns (string memory) {
+    function name() external view virtual override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view virtual override returns (string memory) {
+    function symbol() external view virtual override returns (string memory) {
         return _symbol;
     }
 
@@ -298,7 +266,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
         return "";
     }
 
-    function approve(address to, uint256 tokenId) public virtual override {
+    function approve(address to, uint256 tokenId) external virtual override {
         address owner = ERC721.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
@@ -316,7 +284,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
         return _tokenApprovals[tokenId];
     }
 
-    function setApprovalForAll(address operator, bool approved) public virtual override {
+    function setApprovalForAll(address operator, bool approved) external virtual override {
         _setApprovalForAll(_msgSender(), operator, approved);
     }
 
@@ -328,7 +296,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) external virtual override {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _transfer(from, to, tokenId);
     }
@@ -453,8 +421,6 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         address addr;
         // Keeps track of the start time of ownership with minimal overhead for tokenomics.
         uint64 startTimestamp;
-        // Whether the token has been burned.
-        bool burned;
     }
 
     // Compiler will pack this into a single 256bit word.
@@ -463,16 +429,9 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         uint64 balance;
         // Keeps track of mint count with minimal overhead for tokenomics.
         uint64 numberMinted;
-        // Keeps track of burn count with minimal overhead for tokenomics.
-        uint64 numberBurned;
-        // For miscellaneous variable(s) pertaining to the address
-        // (e.g. number of whitelist mint slots used).
-        // If there are multiple variables, please pack them into a uint64.
-        uint64 aux;
     }
 
     uint256 internal _currentIndex;
-    uint256 internal _burnCounter;
     string private _name;
     string private _symbol;
 
@@ -493,7 +452,6 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         _name = name_;
         _symbol = symbol_;
         _currentIndex = _startTokenId();
-        _burnCounter = 0;
     }
 
     function _startTokenId() internal view virtual returns (uint256) {
@@ -503,14 +461,6 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     function totalSupply() public view returns (uint256) {
         // Counter underflow is impossible as _burnCounter cannot be incremented
         // more than _currentIndex - _startTokenId() times
-        unchecked {
-            return _currentIndex - _burnCounter - _startTokenId();
-        }
-    }
-
-    function _totalMinted() internal view returns (uint256) {
-        // Counter underflow is impossible as _currentIndex does not decrement,
-        // and it is initialized to _startTokenId()
         unchecked {
             return _currentIndex - _startTokenId();
         }
@@ -523,25 +473,9 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
             super.supportsInterface(interfaceId);
     }
 
-    function balanceOf(address owner) public view override returns (uint256) {
+    function balanceOf(address owner) external view override returns (uint256) {
         if (owner == address(0)) revert BalanceQueryForZeroAddress();
         return uint256(_addressData[owner].balance);
-    }
-
-    function _numberMinted(address owner) internal view returns (uint256) {
-        return uint256(_addressData[owner].numberMinted);
-    }
-
-    function _numberBurned(address owner) internal view returns (uint256) {
-        return uint256(_addressData[owner].numberBurned);
-    }
-
-    function _getAux(address owner) internal view returns (uint64) {
-        return _addressData[owner].aux;
-    }
-
-    function _setAux(address owner, uint64 aux) internal {
-        _addressData[owner].aux = aux;
     }
 
     function _ownershipOf(uint256 tokenId) internal view returns (TokenOwnership memory) {
@@ -550,20 +484,14 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         unchecked {
             if (_startTokenId() <= curr && curr < _currentIndex) {
                 TokenOwnership memory ownership = _ownerships[curr];
-                if (!ownership.burned) {
+                if (ownership.addr != address(0)) {
+                    return ownership;
+                }
+                while (true) {
+                    curr--;
+                    ownership = _ownerships[curr];
                     if (ownership.addr != address(0)) {
-                        return ownership;
-                    }
-                    // Invariant:
-                    // There will always be an ownership that has an address and is not burned
-                    // before an ownership that does not have an address and is not burned.
-                    // Hence, curr will not underflow.
-                    while (true) {
-                        curr--;
-                        ownership = _ownerships[curr];
-                        if (ownership.addr != address(0)) {
                             return ownership;
-                        }
                     }
                 }
             }
@@ -575,15 +503,15 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         return _ownershipOf(tokenId).addr;
     }
 
-    function name() public view virtual override returns (string memory) {
+    function name() external view virtual override returns (string memory) {
         return _name;
     }
 
-    function symbol() public view virtual override returns (string memory) {
+    function symbol() external view virtual override returns (string memory) {
         return _symbol;
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(uint256 tokenId) external view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
 
         string memory baseURI = _baseURI();
@@ -594,7 +522,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         return '';
     }
 
-    function approve(address to, uint256 tokenId) public override {
+    function approve(address to, uint256 tokenId) external override {
         address owner = ERC721A.ownerOf(tokenId);
         if (to == owner) revert ApprovalToCurrentOwner();
 
@@ -611,7 +539,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         return _tokenApprovals[tokenId];
     }
 
-    function setApprovalForAll(address operator, bool approved) public virtual override {
+    function setApprovalForAll(address operator, bool approved) external virtual override {
         if (operator == _msgSender()) revert ApproveToCaller();
 
         _operatorApprovals[_msgSender()][operator] = approved;
@@ -626,7 +554,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) external virtual override {
         _transfer(from, to, tokenId);
     }
 
@@ -651,7 +579,7 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     }
 
     function _exists(uint256 tokenId) internal view returns (bool) {
-        return _startTokenId() <= tokenId && tokenId < _currentIndex && !_ownerships[tokenId].burned;
+        return _startTokenId() <= tokenId && tokenId < _currentIndex;
     }
 
     function _safeMint(address to, uint256 quantity) internal {
@@ -838,7 +766,7 @@ contract DooggiesSnack is ERC721A {
     }
 
     function tokenURI(uint256 tokenId)
-        public
+        external
         view
         virtual
         override
@@ -857,7 +785,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint private dayCount = 60 days;
+    uint constant private dayCount = 60 days;
 
     string private baseURIForOGDooggies = "ipfs://QmQpg9czXein8WHbnbsnoebpg8kxNXfU51HxvGosRkrAQj/";
     string private baseExt = ".json";
@@ -1099,7 +1027,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         baseURIForOGDooggies = _baseURI;
     }
 
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() external view returns (uint256) {
         return totalAmount;
     }
 
@@ -1115,15 +1043,15 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         }
     }
 
-    function hasIDBeenMinted(uint tokenID) public view returns (bool) {
+    function hasIDBeenMinted(uint tokenID) external view returns (bool) {
         return OGDooggiesMintedNewNew[tokenID];
     }
 
-    function isStaked(uint tokenID) public view returns (bool) {
+    function isStaked(uint tokenID) external view returns (bool) {
         return idStakeLockTimes[tokenID] != 0 && OGDooggiesMintedNewNew[tokenID] == false;
     }
 
-    function isMintLocked() public view returns (bool) {
+    function isMintLocked() external view returns (bool) {
         return lockMintForever;
     }
 }
