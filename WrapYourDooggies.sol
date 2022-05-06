@@ -807,6 +807,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             dooggies.isApprovedForAll(msg.sender, address(this)),
             "You need approval"
         );
+        require(tokenIds.length > 0, "Must have something");
 
         unchecked {
             uint count = tokenIds.length;
@@ -825,6 +826,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function unwrapMany(uint[] calldata tokenIds) nonReentrant external {
+        require(tokenIds.length > 0, "Must have something");
         unchecked {
             uint count = tokenIds.length;
             uint[] memory qty = new uint[](count);
@@ -846,6 +848,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             dooggies.isApprovedForAll(msg.sender, address(this)),
             "You need approval"
         );
+
+        require(tokenIds.length > 0, "Must have something");
 
         unchecked {
             uint count = tokenIds.length;
@@ -870,6 +874,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function stakeMany(uint[] calldata tokenIds) nonReentrant external {
+        require(tokenIds.length > 0, "Must have something");
         unchecked {
             uint count = tokenIds.length;
             for(uint i = 0; i < count; i++) {
@@ -889,6 +894,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
 
     function unStakeMany(uint[] calldata tokenIds) nonReentrant external {
+        require(tokenIds.length > 0, "Must have something");
         unchecked {
             uint count = tokenIds.length;
 
