@@ -168,10 +168,7 @@ interface IERC1155 is IERC165 {
     ) external;
 }
 
-
 library Strings {
-    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
-
     function toString(uint256 value) internal pure returns (string memory) {
         // Inspired by OraclizeAPI's implementation - MIT licence
         // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
