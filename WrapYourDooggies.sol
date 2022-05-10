@@ -716,6 +716,7 @@ contract DooggiesSnack is ERC721A {
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
     string private baseExt = ".json";
+    string private baseURIForCollectionData = "ipfs://";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
         owner = owner_;
@@ -775,6 +776,15 @@ contract DooggiesSnack is ERC721A {
             return string(abi.encodePacked(baseURIForNewNew));
         }
     }
+
+    function setURIForCollection(string calldata _baseURICollection) external {
+        require(msg.sender == owner, "Step off brah");
+        baseURIForCollectionData = _baseURICollection;
+    }
+
+    function contractURI() public view returns (string memory) {
+        return string(abi.encodePacked(baseURIForCollectionData));
+    }
 }
 
 contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
@@ -782,10 +792,11 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 60 days;
+    uint constant private dayCount = 30 seconds;//60 days;
 
     string private baseURIForOGDooggies = "ipfs://QmQpg9czXein8WHbnbsnoebpg8kxNXfU51HxvGosRkrAQj/";
     string private baseExt = ".json";
+    string private baseURIForCollectionData = "ipfs://";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
 
@@ -911,6 +922,11 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             uint count = tokenIds.length;
             require(count >= 2, "You need at least two dooggies to mint");
 
+            // If you pass me an odd amount of Dooggies let me fix that for you ;)
+            if(count % 2 != 0) {
+                count -= 1;
+            }
+
             uint amountToMint = 0;
             uint8 localCounter = 0;
             for(uint i = 0; i < count; i++) {
@@ -983,6 +999,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     function updateOwner(address owner_) external {
         require(msg.sender == owner, "You are not the owner");
+        require(owner_ != address(0));
         owner = owner_;
     }
 
@@ -1028,6 +1045,15 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     function setURIOG(string calldata _baseURI) external {
         require(msg.sender == owner, "Step off brah");
         baseURIForOGDooggies = _baseURI;
+    }
+
+    function setURIForCollection(string calldata _baseURICollection) external {
+        require(msg.sender == owner, "Step off brah");
+        baseURIForCollectionData = _baseURICollection;
+    }
+
+    function contractURI() public view returns (string memory) {
+        return string(abi.encodePacked(baseURIForCollectionData));
     }
 
     function totalSupply() external view returns (uint256) {
