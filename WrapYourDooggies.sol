@@ -922,11 +922,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             uint count = tokenIds.length;
             require(count >= 2, "You need at least two dooggies to mint");
 
-            // If you pass me an odd amount of Dooggies let me fix that for you ;)
-            if(count % 2 != 0) {
-                count -= 1;
-            }
-
             uint amountToMint = 0;
             uint8 localCounter = 0;
             for(uint i = 0; i < count; i++) {
