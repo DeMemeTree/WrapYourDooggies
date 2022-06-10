@@ -802,8 +802,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 1 minutes;//60 days;
-    uint constant private mintOutLock = 1 minutes;//365 days;
+    uint constant private dayCount = 60 days;
+    uint constant private mintOutLock = 365 days;
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
