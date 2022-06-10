@@ -718,7 +718,7 @@ contract DooggiesSnack is ERC721A {
     bool internal mintEnabled = false;
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
-    string private baseExt = ".json";
+    string private baseExt = "";
     string private baseURIForCollectionData = "ipfs://";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
@@ -795,12 +795,12 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 60 days;
-    uint constant private mintOutLock = 365 days;
+    uint constant private dayCount = 1 minutes;//60 days;
+    uint constant private mintOutLock = 1 minutes;//365 days;
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
-    string private baseExt = ".json";
+    string private baseExt = "";
     string private baseURIForCollectionData = "ipfs://";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
@@ -866,7 +866,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
         );
         require(tokenIds.length > 0, "Must have something");
         require(_isMintedOut == false, "Already minted out");
-        
+
         unchecked {
             uint count = tokenIds.length;
             uint[] memory qty = new uint[](count);
