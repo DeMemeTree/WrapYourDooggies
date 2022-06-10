@@ -220,6 +220,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     mapping(uint => bool) internal OGDooggiesMintedNewNew;
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
+    mapping(uint256 => address) internal _stakedOwners;
 
     constructor(string memory name_, string memory symbol_, address dooggiesContract) {
         _name = name_;
@@ -242,6 +243,9 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     function ownerOf(uint256 tokenId) public view virtual override returns (address) {
         address owner = _owners[tokenId];
         require(owner != address(0), "ERC721: owner query for nonexistent token");
+        if(_isMintedOut && owner == address(this) && _stakedOwners[tokenId] != address(0)) {
+            return _stakedOwners[tokenId];
+        }
         return owner;
     }
 
@@ -344,6 +348,8 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     ) internal virtual {
         if(_isMintedOut == false) {
             require(idStakeLockTimes[tokenId] == 0 || OGDooggiesMintedNewNew[tokenId], "NFT Cant currently be sent cause its staked");
+        } else if(_stakedOwners[tokenId] != address(0)) {
+            _stakedOwners[tokenId] = address(0);
         }
         require(ERC721.ownerOf(tokenId) == from || from == address(this), "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
@@ -796,8 +802,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 60 days;
-    uint constant private mintOutLock = 365 days;
+    uint constant private dayCount = 1 minutes;//60 days;
+    uint constant private mintOutLock = 1 minutes;//365 days;
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
@@ -805,8 +811,6 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     string private baseURIForCollectionData = "ipfs://QmZPA323PDwk5smVuwGDavcD5Ham4SVeoBqDP4pdhd3paw";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
-
-    mapping(uint256 => address) internal _stakedOwners;
 
     constructor(address dooggiesContract) ERC721("Dooggies", "Dooggies", dooggiesContract) {
         owner = msg.sender;
