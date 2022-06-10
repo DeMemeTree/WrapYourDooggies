@@ -242,10 +242,7 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     function ownerOf(uint256 tokenId) public view virtual override returns (address) {
         address owner = _owners[tokenId];
         require(owner != address(0), "ERC721: owner query for nonexistent token");
-        if(_isMintedOut) {
-            return owner;
-        }
-        if(idStakeLockTimes[tokenId] != 0 && OGDooggiesMintedNewNew[tokenId] == false) {
+        if(_isMintedOut == false && idStakeLockTimes[tokenId] != 0 && OGDooggiesMintedNewNew[tokenId] == false) {
             return address(this);
         }
         return owner;
@@ -1075,16 +1072,10 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function hasIDBeenMinted(uint tokenID) external view returns (bool) {
-        if(_isMintedOut) {
-            return true;
-        }
         return OGDooggiesMintedNewNew[tokenID];
     }
 
     function isStaked(uint tokenID) external view returns (bool) {
-        if(_isMintedOut) {
-            return false;
-        }
         return idStakeLockTimes[tokenID] != 0 && OGDooggiesMintedNewNew[tokenID] == false;
     }
 
