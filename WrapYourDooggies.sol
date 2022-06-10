@@ -754,6 +754,7 @@ contract DooggiesSnack is ERC721A {
 
     function updateOwner(address owner_) external {
         require(msg.sender == owner, "You are not the owner");
+        require(owner_ != address(0));
         owner = owner_;
     }
 
