@@ -242,6 +242,9 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     function ownerOf(uint256 tokenId) public view virtual override returns (address) {
         address owner = _owners[tokenId];
         require(owner != address(0), "ERC721: owner query for nonexistent token");
+        if(_isMintedOut) {
+            return owner;
+        }
         if(idStakeLockTimes[tokenId] != 0 && OGDooggiesMintedNewNew[tokenId] == false) {
             return address(this);
         }
@@ -799,8 +802,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 60 days;
-    uint constant private mintOutLock = 365 days;
+    uint constant private dayCount = 1 minutes;//60 days;
+    uint constant private mintOutLock = 1 minutes;//365 days;
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
