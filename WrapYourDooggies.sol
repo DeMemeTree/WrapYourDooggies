@@ -348,8 +348,10 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     ) internal virtual {
         if(_isMintedOut == false) {
             require(idStakeLockTimes[tokenId] == 0 || OGDooggiesMintedNewNew[tokenId], "NFT Cant currently be sent cause its staked");
-        } else if(_stakedOwners[tokenId] != address(0)) {
+        } else if(_stakedOwners[tokenId] != address(0) && _stakedOwners[tokenId] == from) {
+            _owners[tokenId] = from;
             _stakedOwners[tokenId] = address(0);
+            
         }
         require(ERC721.ownerOf(tokenId) == from || from == address(this), "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
