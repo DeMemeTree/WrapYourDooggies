@@ -718,7 +718,7 @@ contract DooggiesSnack is ERC721A {
     bool internal mintEnabled = false;
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
-    string private baseExt = "";
+    string private baseExt = ".json";
     string private baseURIForCollectionData = "ipfs://";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
@@ -800,7 +800,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
-    string private baseExt = "";
+    string private baseExt = ".json";
     string private baseURIForCollectionData = "ipfs://";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
@@ -865,7 +865,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             "You need approval"
         );
         require(tokenIds.length > 0, "Must have something");
-
+        require(_isMintedOut == false, "Already minted out");
+        
         unchecked {
             uint count = tokenIds.length;
             uint[] memory qty = new uint[](count);
@@ -892,6 +893,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     function stakeMany(uint[] calldata tokenIds) nonReentrant external {
         require(tokenIds.length > 0, "Must have something");
+        require(_isMintedOut == false, "Already minted out");
         unchecked {
             uint count = tokenIds.length;
             for(uint i = 0; i < count; i++) {
