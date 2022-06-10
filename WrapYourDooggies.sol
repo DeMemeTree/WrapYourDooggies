@@ -719,7 +719,7 @@ contract DooggiesSnack is ERC721A {
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
     string private baseExt = "";
-    string private baseURIForCollectionData = "ipfs://";
+    string private baseURIForCollectionData = "ipfs://QmZPA323PDwk5smVuwGDavcD5Ham4SVeoBqDP4pdhd3paw";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
         owner = owner_;
@@ -801,7 +801,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
     string private baseExt = "";
-    string private baseURIForCollectionData = "ipfs://";
+    string private baseURIForCollectionData = "ipfs://QmZPA323PDwk5smVuwGDavcD5Ham4SVeoBqDP4pdhd3paw";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
 
