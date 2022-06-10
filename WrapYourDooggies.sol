@@ -220,7 +220,6 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     mapping(uint => bool) internal OGDooggiesMintedNewNew;
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
-    mapping(uint256 => address) internal _stakedOwners;
 
     constructor(string memory name_, string memory symbol_, address dooggiesContract) {
         _name = name_;
@@ -243,8 +242,8 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     function ownerOf(uint256 tokenId) public view virtual override returns (address) {
         address owner = _owners[tokenId];
         require(owner != address(0), "ERC721: owner query for nonexistent token");
-        if(_isMintedOut && owner == address(this) && _stakedOwners[tokenId] != address(0)) {
-            return _stakedOwners[tokenId];
+        if(idStakeLockTimes[tokenId] != 0 && OGDooggiesMintedNewNew[tokenId] == false) {
+            return address(this);
         }
         return owner;
     }
@@ -348,10 +347,6 @@ contract ERC721 is Context, ERC165, IERC721, IERC721Metadata {
     ) internal virtual {
         if(_isMintedOut == false) {
             require(idStakeLockTimes[tokenId] == 0 || OGDooggiesMintedNewNew[tokenId], "NFT Cant currently be sent cause its staked");
-        } else if(_stakedOwners[tokenId] != address(0) && _stakedOwners[tokenId] == from) {
-            _owners[tokenId] = from;
-            _stakedOwners[tokenId] = address(0);
-            
         }
         require(ERC721.ownerOf(tokenId) == from || from == address(this), "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
@@ -804,8 +799,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
-    uint constant private dayCount = 60 days;
-    uint constant private mintOutLock = 365 days;
+    uint constant private dayCount = 1 minutes;//60 days;
+    uint constant private mintOutLock = 1 minutes;//365 days;
     uint private whenDidWeDeploy;
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
@@ -887,7 +882,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
                 require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
-                _stakedOwners[tokenIds[i]] = msg.sender;
+                _owners[tokenIds[i]] = msg.sender;
                 idStakeLockTimes[tokenIds[i]] = block.timestamp;
                 // lol so it shows up on Opensea xD
                 // since we want to funnel people here on first wrap :)
@@ -912,7 +907,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
                 require(idStakeLockTimes[tokenIds[i]] == 0, "This is already staked");
                 require(address(this) == ownerOf(tokenIds[i]), "Bruh.. we dont own that");
                 require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
-                _stakedOwners[tokenIds[i]] = msg.sender;
+                _owners[tokenIds[i]] = msg.sender;
                 idStakeLockTimes[tokenIds[i]] = block.timestamp;
             }
         }
@@ -924,11 +919,9 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             uint count = tokenIds.length;
 
             for(uint i = 0; i < count; i++) {
-                require(msg.sender == _stakedOwners[tokenIds[i]], "Bruh.. you dont own that");
+                require(msg.sender == _owners[tokenIds[i]], "Bruh.. you dont own that");
                 require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only stake once");
                 require(idStakeLockTimes[tokenIds[i]] != 0, "Bruh.. this is not staked");
-
-                _stakedOwners[tokenIds[i]] = address(0);
                 idStakeLockTimes[tokenIds[i]] = 0;
                 safeTransferFrom(address(this), msg.sender, tokenIds[i]);
             }
@@ -945,7 +938,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
             uint8 localCounter = 0;
             for(uint i = 0; i < count; i++) {
                 require(OGDooggiesMintedNewNew[tokenIds[i]] == false, "Bruh.. this NFT can only mint once.");
-                require(msg.sender == _stakedOwners[tokenIds[i]], "Bruh.. you dont own that");
+                require(msg.sender == _owners[tokenIds[i]], "Bruh.. you dont own that");
                 if(block.timestamp - idStakeLockTimes[tokenIds[i]] >= dayCount) {
                     OGDooggiesMintedNewNew[tokenIds[i]] = true;
                     localCounter += 1;
