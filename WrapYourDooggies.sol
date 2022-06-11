@@ -752,7 +752,7 @@ contract DooggiesSnack is ERC721A, Ownable {
     address private devOwner;
     address private whoCanMint;
     bool internal _revealed = false;
-    bool internal mintEnabled = false;
+    bool internal mintEnabled = true;
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
     string private baseExt = "";
