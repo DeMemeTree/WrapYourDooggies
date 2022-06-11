@@ -827,7 +827,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     uint constant private mintOutLock = 365 days;
     uint private whenDidWeDeploy;
 
-    string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
+    string private baseURIForOGDooggies = "ipfs://QmSRPvb4E4oT8J73QoWGyvdFizWzpMkkSozAnCEMjT5K7G/";
     string private baseExt = "";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
