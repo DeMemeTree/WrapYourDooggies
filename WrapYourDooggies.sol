@@ -135,7 +135,7 @@ abstract contract Context {
 }
 
 abstract contract Ownable is Context {
-    address internal _owner;
+    address private _owner;
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -839,7 +839,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     receive() external payable {
-        (bool sent, ) = payable(_owner).call{value: msg.value}("");
+        (bool sent, ) = payable(owner()).call{value: msg.value}("");
         require(sent, "Failed to send Ether");
     }
 
