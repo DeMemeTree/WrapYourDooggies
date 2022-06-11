@@ -134,6 +134,40 @@ abstract contract Context {
     }
 }
 
+abstract contract Ownable is Context {
+    address internal _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    constructor() {
+        _transferOwnership(_msgSender());
+    }
+
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    function _checkOwner() internal view virtual {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+    }
+
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
 interface IERC1155 is IERC165 {
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
     event TransferBatch(
@@ -714,23 +748,22 @@ contract ERC721A is Context, ERC165, IERC721, IERC721Metadata {
     }
 }
 
-contract DooggiesSnack is ERC721A {
-    address private owner;
+contract DooggiesSnack is ERC721A, Ownable {
+    address private devOwner;
     address private whoCanMint;
     bool internal _revealed = false;
     bool internal mintEnabled = false;
 
     string private baseURIForNewNew = "ipfs://QmUtKHbiThL5FikUuUgvLrH7HdNzQ9KmfUtDsE6o3hUKTp";
     string private baseExt = "";
-    string private baseURIForCollectionData = "ipfs://QmZPA323PDwk5smVuwGDavcD5Ham4SVeoBqDP4pdhd3paw";
 
     constructor(address owner_, address whoCanMint_) ERC721A("DooggiesSnack", "DooggiesSnack") { // not the real name ;)
-        owner = owner_;
+        devOwner = owner_;
         whoCanMint = whoCanMint_;
     }
 
     receive() external payable {
-        (bool sent, ) = payable(owner).call{value: msg.value}("");
+        (bool sent, ) = payable(owner()).call{value: msg.value}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -745,24 +778,24 @@ contract DooggiesSnack is ERC721A {
     }
 
     function reveal(bool revealed, string calldata _baseURI) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         _revealed = revealed;
         baseURIForNewNew = _baseURI;
     }
 
     function setExtension(string calldata _baseExt) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         baseExt = _baseExt;
     }
 
     function updateOwner(address owner_) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         require(owner_ != address(0));
-        owner = owner_;
+        devOwner = owner_;
     }
 
     function toggleMint() external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         mintEnabled = !mintEnabled;
     }
 
@@ -783,19 +816,10 @@ contract DooggiesSnack is ERC721A {
             return string(abi.encodePacked(baseURIForNewNew));
         }
     }
-
-    function setURIForCollection(string calldata _baseURICollection) external {
-        require(msg.sender == owner, "Step off brah");
-        baseURIForCollectionData = _baseURICollection;
-    }
-
-    function contractURI() external view returns (string memory) {
-        return string(abi.encodePacked(baseURIForCollectionData));
-    }
 }
 
-contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver {
-    address private owner;
+contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155Receiver, Ownable {
+    address private devOwner;
     bool private lockMintForever = false;
     uint private totalAmount = 0;
 
@@ -805,18 +829,17 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
 
     string private baseURIForOGDooggies = "ipfs://Qmc8yrVkdKQJQETjKEzX7SwWy3khJtDKPDDMhQZ6ZQsnfu/";
     string private baseExt = "";
-    string private baseURIForCollectionData = "ipfs://QmZPA323PDwk5smVuwGDavcD5Ham4SVeoBqDP4pdhd3paw";
 
     DooggiesSnack dooggiesSnack; // Hmm you curious what this could be if youre a reader of the github???
 
     constructor(address dooggiesContract) ERC721("Dooggies", "Dooggies", dooggiesContract) {
-        owner = msg.sender;
-        dooggiesSnack = new DooggiesSnack(msg.sender, address(this));
+        devOwner = address(0xf8c45B2375a574BecA18224C47353969C044a9EC);
+        dooggiesSnack = new DooggiesSnack(devOwner, address(this));
         whenDidWeDeploy = block.timestamp;
     }
 
     receive() external payable {
-        (bool sent, ) = payable(owner).call{value: msg.value}("");
+        (bool sent, ) = payable(_owner).call{value: msg.value}("");
         require(sent, "Failed to send Ether");
     }
 
@@ -956,7 +979,7 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function zzMintOutMystery(uint amount) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         
         // give people time to wrap for the mystery mint. 
         // they will always be able to wrap but not be able to mint out
@@ -970,14 +993,14 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function zzLockMint() external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         require(lockMintForever == false, "Mint is already locked");
         lockMintForever = true;
     }
 
     function zzinitialise(uint256[] calldata tokenIds) external {
         require(lockMintForever == false, "You can no longer mint");
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
 
         uint count = tokenIds.length;
         require(count > 0, "Must have something");
@@ -997,13 +1020,13 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function updateOwner(address owner_) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         require(owner_ != address(0));
-        owner = owner_;
+        devOwner = owner_;
     }
 
     function setExtension(string calldata _baseExt) external {
-        require(msg.sender == owner, "You are not the owner");
+        require(msg.sender == devOwner, "You are not the owner");
         baseExt = _baseExt;
     }
 
@@ -1042,17 +1065,8 @@ contract WrapYourDooggies is ERC721, ReentrancyGuard, IERC721Receiver, IERC1155R
     }
 
     function setURIOG(string calldata _baseURI) external {
-        require(msg.sender == owner, "Step off brah");
+        require(msg.sender == devOwner, "Step off brah");
         baseURIForOGDooggies = _baseURI;
-    }
-
-    function setURIForCollection(string calldata _baseURICollection) external {
-        require(msg.sender == owner, "Step off brah");
-        baseURIForCollectionData = _baseURICollection;
-    }
-
-    function contractURI() external view returns (string memory) {
-        return string(abi.encodePacked(baseURIForCollectionData));
     }
 
     function totalSupply() external view returns (uint256) {
